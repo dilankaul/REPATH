@@ -16,3 +16,5 @@ artifacts/repath/*
 !artifacts/repath/test_candidate_scores.csv
 /data/*
 !/data/.gitkeep
+generated/
+notebooks/.ipynb_checkpoints/

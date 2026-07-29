@@ -9,7 +9,8 @@ A reproducible evaluation suite for REPATH and five Web-UI element-matching base
 - Run accuracy-only benchmarks by default, or select cold end-to-end or page-pair-amortized runtime benchmarking with `--runtime-mode cold` or `--runtime-mode amortized`.
 - Evaluate a user-selected REPATH confidence margin with `--tau`.
 - Select a margin automatically using pooled development out-of-fold precision and coverage constraints.
-- Display the latest REPATH ranking, calibration, exhaustive ablation, feature-vector, and feature-importance results directly in this README.
+- Reproduce feature generation, training, exhaustive ablation, and calibration with the bundled Jupyter notebooks.
+- Display the bundled REPATH ranking, calibration, feature-vector, feature-importance, and ablation results directly in this README.
 
 ## Installation
 
@@ -30,12 +31,14 @@ repath-eval --help
 ```text
 REPATH-Evaluation-Suite/
 ├── artifacts/
-│   └── repath/              # Bundled manifest and candidate-score calibration inputs
+│   └── repath/              # Query manifest and candidate-score calibration inputs
 ├── configs/
 │   └── site_split.yaml
 ├── data/                    # UITestFix MatchingDataset site folders
-├── models/                  # Latest REPATH model, base config, and calibrated config
-├── results/
+├── generated/               # Ignored feature matrices, caches, and diagnostics
+├── models/                  # Trained model, base config, and calibrated config
+├── notebooks/               # Portable Jupyter research workflow
+├── results/                 # Ignored benchmark and notebook reports
 ├── src/repath_evaluation/
 │   ├── algorithms/
 │   ├── calibration/
@@ -80,7 +83,7 @@ repath-eval inspect --data-root /path/to/MatchingDataset
 
 ## Site groups
 
-The groups are stored in [`configs/site_split.yaml`](configs/site_split.yaml). The latest feature-generation run extracted 782 development and 318 held-out framework queries, for 1,100 total queries.
+The groups are stored in [`configs/site_split.yaml`](configs/site_split.yaml). The feature-generation workflow extracts 782 development and 318 held-out framework queries, for 1,100 total queries.
 
 ### Development sites
 
@@ -241,6 +244,22 @@ Run the accuracy benchmark and the two runtime protocols separately, then enter 
 | Similo    |                |                                      |                                           |
 | REPATH    |                |                                      |                                           |
 
+## Research notebooks
+
+The repository includes the three notebooks used to produce the bundled REPATH model and calibration inputs:
+
+1. [`REPATH_01_Generate_Features.ipynb`](notebooks/REPATH_01_Generate_Features.ipynb) generates the framework-query manifest, candidate shortlists, feature schema, and 50-feature candidate dataset.
+2. [`REPATH_02_Train_Evaluate_Ablate.ipynb`](notebooks/REPATH_02_Train_Evaluate_Ablate.ipynb) performs four-fold site-grouped model selection, trains the final LambdaRank model, evaluates the held-out test sites, reports feature importance, and evaluates all 31 feature-group combinations.
+3. [`REPATH_03_Calibrate_Confidence_Margin.ipynb`](notebooks/REPATH_03_Calibrate_Confidence_Margin.ipynb) selects the confidence threshold from development OOF predictions, reports the complete threshold table, and writes the calibrated runtime configuration.
+
+Install the notebook dependencies with:
+
+```bash
+python -m pip install -e '.[notebooks]'
+```
+
+The notebooks use repository-relative paths and read the site groups from `configs/site_split.yaml`. Large feature matrices, caches, and diagnostic outputs are written under `generated/repath/` and are not committed. Training and calibration reports are written under `results/`. See [`notebooks/README.md`](notebooks/README.md) for the complete data flow.
+
 ## REPATH confidence-margin calibration
 
 Run the default calibration:
@@ -268,7 +287,7 @@ With the bundled artifacts, the default calibration selects `tau = 0.40`.
 | `--base-config` | Base REPATH runtime configuration used to generate a calibrated configuration | Not set |
 | `--config-output` | Output path for the calibrated runtime configuration; requires `--base-config` | Not set |
 
-The latest calibration inputs are included in the repository:
+The calibration inputs are included in the repository:
 
 ```text
 artifacts/repath/
@@ -305,11 +324,11 @@ repath-eval calibrate \
 
 The command reports accepted and correct cases, precision, conditional and end-to-end coverage, conditional and end-to-end recall, and both F1 definitions. Threshold selection never uses held-out test results. Existing calibration result files in the selected output directory are replaced.
 
-## Latest REPATH research results
+## REPATH research results
 
-These tables were extracted from the three latest supplied notebook runs. They use the 50-feature representation, 16 development sites, six held-out test sites, four-fold site-grouped development cross-validation, and all 31 non-empty feature-group combinations.
+The bundled notebooks produce these results using the 50-feature representation, 16 development sites, six held-out test sites, four-fold site-grouped development cross-validation, and all 31 non-empty feature-group combinations.
 
-> **Artifact alignment:** the bundled `models/lgb_ranker.txt`, `models/config_base.pkl`, calibration score files, and query manifest come from the latest supplied notebook run and align with the result tables below.
+> **Artifact alignment:** `models/lgb_ranker.txt`, `models/config_base.pkl`, the calibration score files, and the query manifest are produced by the bundled notebook workflow and align with the result tables below.
 
 ### Candidate retrieval
 
@@ -384,9 +403,9 @@ The development OOF selector chose `tau = 0.40` while targeting 99% precision an
 |    4 | Structural    |        8 |  1261.093 |      2.38% |
 |    5 | Geometry      |        5 |  1227.907 |      2.32% |
 
-### Individual feature importance from the latest notebook run
+### Individual feature importance
 
-The latest notebook displayed its Top 20 gain-ranked features directly.
+The training notebook reports the Top 20 gain-ranked features shown below.
 
 | Rank | Vector index | Feature                 | Group      |      Gain | Gain share |
 | ---: | -----------: | ----------------------- | ---------- | --------: | ---------: |
