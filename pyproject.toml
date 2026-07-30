@@ -3,9 +3,9 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "repath-evaluation-suite"
+name = "repath-web-ui-locator-healing"
 version = "0.5.0"
-description = "Evaluation, benchmarking, ablation reporting, and confidence calibration for REPATH"
+description = "Evaluation and reproducibility package for REPATH self-healing Web UI test locators"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

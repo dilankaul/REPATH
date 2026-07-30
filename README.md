@@ -1,6 +1,6 @@
-# REPATH Evaluation Suite
+# REPATH: Confidence-Calibrated Learning-to-Rank for Self-Healing Web UI Test Locators
 
-A reproducible evaluation suite for REPATH and five Web-UI element-matching baselines. It combines baseline benchmarking, cold and page-pair amortized runtime measurement, REPATH ranking evaluation, exhaustive feature-group ablation reporting, feature-importance reporting, and confidence-margin calibration.
+This repository provides a reproducible evaluation suite for REPATH and five Web-UI element-matching baselines. It combines baseline benchmarking, cold and page-pair amortized runtime measurement, REPATH ranking evaluation, exhaustive feature-group ablation reporting, feature-importance reporting, and confidence-margin calibration.
 
 ## Capabilities
 
@@ -29,7 +29,7 @@ repath-eval --help
 ## Repository layout
 
 ```text
-REPATH-Evaluation-Suite/
+REPATH-Web-UI-Locator-Healing/
 ├── artifacts/
 │   ├── benchmark/
 │   └── repath/
@@ -57,7 +57,7 @@ This suite uses the dataset released with **UITestFix**:
 Download the dataset and open its `MatchingDataset` folder. Copy the folders **inside** `MatchingDataset` directly into this repository's `data/` directory.
 
 ```text
-REPATH-Evaluation-Suite/
+REPATH-Web-UI-Locator-Healing/
 ├── data/
 │   ├── amazon-2017-2020/
 │   │   ├── old/

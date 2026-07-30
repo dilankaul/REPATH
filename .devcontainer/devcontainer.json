@@ -1,5 +1,5 @@
 {
-  "name": "REPATH Evaluation Suite",
+  "name": "REPATH Web UI Locator Healing",
   "image": "mcr.microsoft.com/devcontainers/python:1-3.11-bookworm",
   "postCreateCommand": "python -m pip install --upgrade pip && pip install -e '.[dev,notebooks]'",
   "customizations": {
