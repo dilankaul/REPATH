@@ -31,14 +31,14 @@ repath-eval --help
 ```text
 REPATH-Evaluation-Suite/
 ├── artifacts/
-│   └── repath/              # Query manifest and candidate-score calibration inputs
+│   ├── benchmark/
+│   └── repath/
 ├── configs/
-│   └── site_split.yaml
-├── data/                    # UITestFix MatchingDataset site folders
-├── generated/               # Ignored feature matrices, caches, and diagnostics
-├── models/                  # Trained model, base config, and calibrated config
-├── notebooks/               # Portable Jupyter research workflow
-├── results/                 # Ignored benchmark and notebook reports
+├── data/
+├── generated/
+├── models/
+├── notebooks/
+├── results/
 ├── src/repath_evaluation/
 │   ├── algorithms/
 │   ├── calibration/
@@ -138,13 +138,13 @@ By default, this evaluates WATER, VISTA, SFTM, WebEvo, Similo, and REPATH on the
 
 ### Benchmark arguments
 
-| Argument | Description | Default |
-| -------- | ----------- | ------- |
-| `--algorithms` | Algorithms to evaluate | `water vista sftm webevo similo repath` |
-| `--sites` | Site group, one site, or multiple explicit sites | `test` |
-| `--repeats` | Number of complete benchmark repetitions; must be a positive integer | `1` |
-| `--runtime-mode` | Runtime protocol: `cold` or `amortized`; omit for accuracy-only execution | Not set |
-| `--output` | Directory used to save benchmark result files | `results/benchmark` |
+| Argument         | Description                                                               | Default                                 |
+| ---------------- | ------------------------------------------------------------------------- | --------------------------------------- |
+| `--algorithms`   | Algorithms to evaluate                                                    | `water vista sftm webevo similo repath` |
+| `--sites`        | Site group, one site, or multiple explicit sites                          | `test`                                  |
+| `--repeats`      | Number of complete benchmark repetitions; must be a positive integer      | `1`                                     |
+| `--runtime-mode` | Runtime protocol: `cold` or `amortized`; omit for accuracy-only execution | Not set                                 |
+| `--output`       | Directory used to save benchmark result files                             | `results/benchmark`                     |
 
 Run only the five baseline algorithms:
 
@@ -190,10 +190,10 @@ repath-eval benchmark \
 
 The benchmark supports accuracy-only execution and two timed protocols. Both timed protocols use the same fixed eligible queries and report `runtime_mode`, `runtime_samples`, and `mean_runtime_ms` in the result summaries.
 
-| Runtime configuration | Execution | Reported value |
-| --------------------- | --------- | -------------- |
-| Omitted | Prepares each matcher once per page pair and evaluates all queries without recording time | Accuracy only |
-| `--runtime-mode cold` | Independently loads the page data, constructs and prepares the matcher, and executes the match for every query | Mean cold end-to-end time per query |
+| Runtime configuration      | Execution                                                                                                                                                   | Reported value                          |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| Omitted                    | Prepares each matcher once per page pair and evaluates all queries without recording time                                                                   | Accuracy only                           |
+| `--runtime-mode cold`      | Independently loads the page data, constructs and prepares the matcher, and executes the match for every query                                              | Mean cold end-to-end time per query     |
 | `--runtime-mode amortized` | Loads and prepares once per page pair, executes all associated queries, and divides the complete timed page-pair duration by the number of eligible queries | Mean page-pair amortized time per query |
 
 For more reproducible runtime measurements, restrict common numerical libraries to one CPU thread before running either timed protocol:
@@ -233,16 +233,40 @@ For cold results, each `query_results.csv` runtime value is an independently tim
 
 ### Benchmark results
 
-Run the accuracy benchmark and the two runtime protocols separately, then enter the resulting values in this table.
+The accuracy results use all 318 framework queries from the six held-out test sites. Runtime values are reported as the mean ± sample standard deviation across 10 independent complete benchmark runs. Each runtime run evaluates the same 318-query test set; the standard deviation is calculated across the 10 run-level mean runtimes rather than across individual query rows.
 
-| Algorithm | Top-1 accuracy | Mean cold end-to-end time (ms/query) | Mean page-pair amortized time (ms/query) |
-| --------- | -------------: | -----------------------------------: | ----------------------------------------: |
-| WATER     |                |                                      |                                           |
-| VISTA     |                |                                      |                                           |
-| SFTM      |                |                                      |                                           |
-| WebEvo    |                |                                      |                                           |
-| Similo    |                |                                      |                                           |
-| REPATH    |                |                                      |                                           |
+| Algorithm | Top-1 accuracy | Cold end-to-end time (ms/query) | Page-pair amortized time (ms/query) |
+| --------- | -------------: | ------------------------------: | ----------------------------------: |
+| WATER     |         50.63% |                  155.89 ± 10.48 |                        45.94 ± 2.17 |
+| VISTA     |         58.49% |                 3342.89 ± 82.83 |                      813.97 ± 26.61 |
+| SFTM      |         81.45% |                  461.21 ± 25.50 |                         6.88 ± 0.57 |
+| WebEvo    |         68.87% |                  690.67 ± 33.30 |                       182.89 ± 7.02 |
+| Similo    |         78.93% |                  640.81 ± 28.33 |                      403.08 ± 11.69 |
+| REPATH    |         94.97% |                 2271.29 ± 86.69 |                      633.32 ± 21.00 |
+
+REPATH achieved the highest Top-1 accuracy. Its mean runtime was lower than VISTA under both timed protocols, although SFTM, WATER, WebEvo, and Similo were faster in the page-pair amortized setting.
+
+#### Runtime environment
+
+Runtime measurements were collected on a GitHub Codespaces virtual machine with the hardware and software configuration shown below.
+
+| Component                | Configuration                                                                          |
+| ------------------------ | -------------------------------------------------------------------------------------- |
+| Processor                | AMD EPYC 7763, 2 vCPUs                                                                 |
+| Memory                   | 7.8 GiB RAM, no swap                                                                   |
+| Operating system         | Debian GNU/Linux 12 (bookworm)                                                         |
+| Kernel                   | Linux 6.8.0-1052-azure, x86_64                                                         |
+| Python                   | 3.11.13 (`/usr/local/bin/python`)                                                      |
+| Execution device         | CPU only; CUDA unavailable                                                             |
+| NumPy                    | 2.4.6                                                                                  |
+| pandas                   | 2.3.3                                                                                  |
+| OpenCV                   | 4.14.0                                                                                 |
+| LightGBM                 | 4.7.0                                                                                  |
+| PyTorch                  | 2.13.0+cu130                                                                           |
+| SentenceTransformers     | 5.6.1                                                                                  |
+| Reproducibility settings | `PYTHONHASHSEED=0`, `OMP_NUM_THREADS=1`, `MKL_NUM_THREADS=1`, `OPENBLAS_NUM_THREADS=1` |
+
+The publication-ready benchmark summaries and environment record are committed under [`artifacts/benchmark/`](artifacts/benchmark/). Raw per-run outputs are written under `results/` and excluded from version control.
 
 ## Research notebooks
 
@@ -272,20 +296,20 @@ By default, the command selects the confidence-margin threshold using pooled dev
 
 With the bundled artifacts, the default calibration selects `tau = 0.40`.
 
-| Argument | Description | Default |
-| -------- | ----------- | ------- |
-| `--manifest` | Query manifest containing query IDs, sites, and splits | `artifacts/repath/repath_query_manifest.csv` |
-| `--development-scores` | Pooled development out-of-fold candidate scores used for threshold selection | `artifacts/repath/development_oof_candidate_scores.csv` |
-| `--test-scores` | Held-out test candidate scores used only for final evaluation | `artifacts/repath/test_candidate_scores.csv` |
-| `--tau` | Evaluates a fixed threshold instead of selecting one automatically | Not set |
-| `--target-precision` | Minimum development precision required during automatic selection | `0.99` |
-| `--min-end-to-end-coverage` | Minimum development end-to-end coverage required during automatic selection | `0.80` |
-| `--tau-min` | Smallest threshold considered during automatic selection | `0.00` |
-| `--tau-max` | Largest threshold considered during automatic selection | `1.00` |
-| `--tau-step` | Threshold-grid increment | `0.05` |
-| `--output` | Directory used to save calibration results | `results/calibration` |
-| `--base-config` | Base REPATH runtime configuration used to generate a calibrated configuration | Not set |
-| `--config-output` | Output path for the calibrated runtime configuration; requires `--base-config` | Not set |
+| Argument                    | Description                                                                    | Default                                                 |
+| --------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------- |
+| `--manifest`                | Query manifest containing query IDs, sites, and splits                         | `artifacts/repath/repath_query_manifest.csv`            |
+| `--development-scores`      | Pooled development out-of-fold candidate scores used for threshold selection   | `artifacts/repath/development_oof_candidate_scores.csv` |
+| `--test-scores`             | Held-out test candidate scores used only for final evaluation                  | `artifacts/repath/test_candidate_scores.csv`            |
+| `--tau`                     | Evaluates a fixed threshold instead of selecting one automatically             | Not set                                                 |
+| `--target-precision`        | Minimum development precision required during automatic selection              | `0.99`                                                  |
+| `--min-end-to-end-coverage` | Minimum development end-to-end coverage required during automatic selection    | `0.80`                                                  |
+| `--tau-min`                 | Smallest threshold considered during automatic selection                       | `0.00`                                                  |
+| `--tau-max`                 | Largest threshold considered during automatic selection                        | `1.00`                                                  |
+| `--tau-step`                | Threshold-grid increment                                                       | `0.05`                                                  |
+| `--output`                  | Directory used to save calibration results                                     | `results/calibration`                                   |
+| `--base-config`             | Base REPATH runtime configuration used to generate a calibrated configuration  | Not set                                                 |
+| `--config-output`           | Output path for the calibrated runtime configuration; requires `--base-config` | Not set                                                 |
 
 The calibration inputs are included in the repository:
 
@@ -589,7 +613,9 @@ The training notebook reports the Top 20 gain-ranked features shown below.
 
 ## Output files
 
-A benchmark run writes `query_results.csv`, `site_results.csv`, `summary.csv`, and `run_metadata.json`. Runtime fields are omitted for accuracy-only execution and included when `--runtime-mode cold` or `--runtime-mode amortized` is selected. The selected protocol is recorded in the `runtime_mode` column and in `run_metadata.json`.
+A benchmark run writes `query_results.csv`, `site_results.csv`, `summary.csv`, and `run_metadata.json` to the selected output directory. Runtime fields are omitted for accuracy-only execution and included when `--runtime-mode cold` or `--runtime-mode amortized` is selected.
+
+The `results/` directory is excluded from version control because it contains raw and repeated execution outputs. The summarized accuracy, runtime, and environment artifacts used in the reported benchmark are committed under [`artifacts/benchmark/`](artifacts/benchmark/).
 
 A calibration run writes `tau_margin_summary.csv`, `tau_margin_query_decisions.csv`, and `calibration_metadata.json`. Automatic selection also writes `tau_margin_development_oof_curve.csv`.
 
