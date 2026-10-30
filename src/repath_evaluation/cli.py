@@ -8,18 +8,18 @@ import pandas as pd
 
 from .algorithms import (
     RepathMatcher,
-    WaterMatcher,
-    VistaMatcher,
     SftmMatcher,
-    WebEvoMatcher,
     SimiloMatcher,
+    VistaMatcher,
+    WaterMatcher,
+    WebEvoMatcher,
 )
 from .algorithms.repath.runtime import clear_model_caches
 from .calibration import run_calibration
 from .data import discover_sites, load_page_pair, load_site_split
 from .doctor import doctor_command
 from .evaluation import aggregate_summary, build_queries, metadata, run_site
-
+from .statistical_analysis import configure_parser as configure_statistics_parser
 
 _ALGORITHM_DISPLAY_NAMES = {
     "water": "WATER",
@@ -461,6 +461,13 @@ def build_parser() -> argparse.ArgumentParser:
     compare.add_argument("--reference-results", required=True)
     compare.add_argument("--output")
     compare.set_defaults(func=compare_command)
+
+    statistics = sub.add_parser(
+        "statistics",
+        allow_abbrev=False,
+        help="Compute accuracy intervals and paired statistical comparisons",
+    )
+    configure_statistics_parser(statistics)
     return parser
 
 

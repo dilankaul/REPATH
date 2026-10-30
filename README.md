@@ -5,6 +5,7 @@ This repository provides a reproducible evaluation suite for REPATH and five Web
 ## Capabilities
 
 - Benchmark WATER, VISTA, SFTM, WebEvo, Similo, and REPATH under one fixed Top-1 protocol.
+- Calculate bootstrap confidence intervals and exact McNemar comparisons with Holm correction.
 - Select `test` (default), `development`, `all`, one site, or multiple explicit sites.
 - Run accuracy-only benchmarks by default, or select cold end-to-end or page-pair-amortized runtime benchmarking with `--runtime-mode cold` or `--runtime-mode amortized`.
 - Evaluate a user-selected REPATH confidence margin with `--tau`.
@@ -32,13 +33,15 @@ repath-eval --help
 REPATH-Web-UI-Locator-Healing/
 ├── artifacts/
 │   ├── benchmark/
-│   └── repath/
+│   ├── repath/
+│   └── statistics/
 ├── configs/
 ├── data/
 ├── generated/
 ├── models/
 ├── notebooks/
 ├── results/
+├── scripts/
 ├── src/repath_evaluation/
 │   ├── algorithms/
 │   ├── calibration/
@@ -268,12 +271,56 @@ Runtime measurements were collected on a GitHub Codespaces virtual machine with 
 
 The publication-ready benchmark summaries and environment record are committed under [`artifacts/benchmark/`](artifacts/benchmark/). Raw per-run outputs are written under `results/` and excluded from version control.
 
+## Statistical analysis
+
+The analysis uses paired Top-1 correctness outcomes for the 318 queries from the six held-out test sites. Run the accuracy benchmark before computing the statistics:
+
+```bash
+repath-eval benchmark
+repath-eval statistics \
+  --input results/benchmark/query_results.csv \
+  --output-dir results/statistics \
+  --bootstrap-count 10000 \
+  --seed 42
+```
+
+### Accuracy confidence intervals
+
+Top-1 accuracy is reported with nominal 95% percentile bootstrap confidence intervals based on 10,000 query-level resamples.
+
+| Algorithm | Top-1 accuracy | 95% CI |
+| --------- | -------------: | -----: |
+| WATER | 50.63% | [44.97%, 56.29%] |
+| VISTA | 58.49% | [53.14%, 63.84%] |
+| SFTM | 81.45% | [77.04%, 85.53%] |
+| WebEvo | 68.87% | [63.84%, 73.90%] |
+| Similo | 78.93% | [74.21%, 83.33%] |
+| REPATH | 94.97% | [92.45%, 97.17%] |
+
+### Pairwise statistical comparisons
+
+REPATH is compared with each baseline using an exact two-sided McNemar test. Holm–Bonferroni correction is applied across the five comparisons. Accuracy improvements and paired-bootstrap confidence intervals are expressed in percentage points (pp).
+
+| Baseline | Improvement (pp) | 95% paired-bootstrap CI (pp) | Exact McNemar p-value | Holm-adjusted p-value |
+| -------- | ---------------: | ----------------------------: | --------------------: | --------------------: |
+| WATER | +44.34 | [38.68, 50.00] | 5.68e-38 | 2.84e-37 |
+| VISTA | +36.48 | [31.13, 41.82] | 7.16e-34 | 2.86e-33 |
+| SFTM | +13.52 | [9.43, 17.61] | 2.42e-10 | 2.42e-10 |
+| WebEvo | +26.10 | [21.38, 31.13] | 4.45e-24 | 1.33e-23 |
+| Similo | +16.04 | [11.64, 20.44] | 1.70e-12 | 3.40e-12 |
+
+All five Holm-adjusted p-values are below 0.001. The bootstrap uses 10,000 paired query-level resamples with replacement (NumPy `default_rng`, seed 42), with shared resampling indices across algorithms. The reported confidence intervals are nominal rather than simultaneous. Neither the query-level bootstrap nor McNemar's test accounts for within-website dependence.
+
+The command writes `accuracy_confidence_intervals.csv` and `statistical_comparison.csv` to `results/statistics/`. The corresponding publication summaries are retained under `artifacts/statistics/`.
+
 ## Research notebooks
 
 The repository includes the three notebooks used to produce the bundled REPATH model and calibration inputs:
 
 1. [`REPATH_01_Generate_Features.ipynb`](notebooks/REPATH_01_Generate_Features.ipynb) generates the framework-query manifest, candidate shortlists, feature schema, and 50-feature candidate dataset.
+
 2. [`REPATH_02_Train_Evaluate_Ablate.ipynb`](notebooks/REPATH_02_Train_Evaluate_Ablate.ipynb) performs four-fold site-grouped model selection, trains the final LambdaRank model, evaluates the held-out test sites, reports feature importance, and evaluates all 31 feature-group combinations.
+
 3. [`REPATH_03_Calibrate_Confidence_Margin.ipynb`](notebooks/REPATH_03_Calibrate_Confidence_Margin.ipynb) selects the confidence threshold from development OOF predictions, reports the complete threshold table, and writes the calibrated runtime configuration.
 
 Install the notebook dependencies with:
@@ -389,6 +436,7 @@ The development OOF selector chose `tau = 0.40` while targeting 99% precision an
 | Held-out test             | 0.40 |      303 |     298 |    98.35% |               96.50% |              95.28% |             94.90% |            93.71% |         96.60% |        95.97% |
 
 <details>
+
 <summary><strong>Complete development OOF tau sweep</strong></summary>
 
 |  Tau | Accepted | Correct | Precision | End-to-end coverage | End-to-end recall | End-to-end F1 |
@@ -455,6 +503,7 @@ The training notebook reports the Top 20 gain-ranked features shown below.
 |   20 |           33 | `ancestor_jaccard`      | Attribute  |   132.591 |      0.25% |
 
 <details>
+
 <summary><strong>Complete ordered 50-feature vector</strong></summary>
 
 | Vector index | Feature                    | Group      | Type      | Semantic model   |
@@ -513,6 +562,7 @@ The training notebook reports the Top 20 gain-ranked features shown below.
 </details>
 
 <details>
+
 <summary><strong>Complete 50-feature gain importance for the latest model</strong></summary>
 
 | Rank | Vector index | Feature                    | Group      |      Gain | Gain share |
@@ -573,6 +623,7 @@ The training notebook reports the Top 20 gain-ranked features shown below.
 ### Exhaustive feature-group ablation
 
 <details open>
+
 <summary><strong>Complete 31-combination ablation table</strong></summary>
 
 | Rank | Included feature groups                                | Features | CV rounds | Test end-to-end Top-1 | Test end-to-end MRR | Test end-to-end NDCG@5 | Δ Top-1 vs full |
@@ -663,19 +714,6 @@ Each implementation is pinned to an authors' repository revision. The revisions 
 - Authors' repository: [`michelnass/Similo2`](https://github.com/michelnass/Similo2)
 - Pinned revision: [`743ddede7df92814ddc3fb7f96e09bdb508e285a`](https://github.com/michelnass/Similo2/tree/743ddede7df92814ddc3fb7f96e09bdb508e285a)
 - Benchmark boundary: candidate eligibility and the original 14 manually weighted locator properties are retained. The authors' program returns the best candidate; this benchmark preserves all scored candidates so that the common evaluator can derive Top-k rankings while using the same Top-1 ordering.
-
-## Comparing with external reference predictions
-
-A CSV from another implementation can be compared with this suite's query-level predictions:
-
-```bash
-repath-eval compare \
-  --python-results results/baselines/query_results.csv \
-  --reference-results /path/to/reference_results.csv \
-  --output results/parity_mismatches.csv
-```
-
-Both files must contain `algorithm`, `site`, `old_element_id`, and `predicted_new_element_id`.
 
 ## Third-party notices
 

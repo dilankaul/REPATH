@@ -201,3 +201,33 @@ def test_run_writes_runtime_outputs_when_runtime_mode_is_selected(monkeypatch, t
     assert site.loc[0, "mean_runtime_ms"] == 12.0
     assert summary.loc[0, "runtime_mode"] == "cold"
     assert summary.loc[0, "mean_runtime_ms"] == 12.0
+
+
+def test_statistics_cli_options_and_execution(monkeypatch, tmp_path) -> None:
+    from repath_evaluation import statistical_analysis
+
+    parser = cli.build_parser()
+    defaults = parser.parse_args(["statistics"])
+    assert defaults.input == Path("results/benchmark/query_results.csv")
+    assert defaults.output_dir == Path("results/statistics")
+    assert defaults.bootstrap_count == 10000
+    assert defaults.seed == 42
+
+    source = tmp_path / "input.csv"
+    output = tmp_path / "statistics"
+    monkeypatch.setattr(statistical_analysis, "load_outcomes", lambda path: path)
+    calls = []
+
+    def fake_analyze(outcomes, count, seed):
+        calls.append((outcomes, count, seed))
+        return pd.DataFrame({"accuracy": [95]}), pd.DataFrame({"p_value": [0.01]})
+
+    monkeypatch.setattr(statistical_analysis, "analyze", fake_analyze)
+    args = parser.parse_args([
+        "statistics", "--input", str(source), "--output-dir", str(output),
+        "--bootstrap-count", "20", "--seed", "7",
+    ])
+    args.func(args)
+    assert calls == [(source, 20, 7)]
+    assert (output / "accuracy_confidence_intervals.csv").exists()
+    assert (output / "statistical_comparison.csv").exists()
