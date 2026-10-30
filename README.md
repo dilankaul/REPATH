@@ -1,6 +1,12 @@
-# REPATH: Confidence-Calibrated Learning-to-Rank for Self-Healing Web UI Test Locators
+# REPATH
 
 This repository provides a reproducible evaluation suite for REPATH and five Web-UI element-matching baselines. It combines baseline benchmarking, cold and page-pair amortized runtime measurement, REPATH ranking evaluation, exhaustive feature-group ablation reporting, feature-importance reporting, and confidence-margin calibration.
+
+## Publication
+
+**REPATH: Confidence-Calibrated Learning-to-Rank for Self-Healing Web UI Test Locators**
+
+Accepted for presentation at the 2026 International Conference on Advancements in Computing (ICAC 2026).
 
 ## Capabilities
 
