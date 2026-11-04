@@ -26,6 +26,13 @@ def test_protocol_and_prediction_parity(monkeypatch, tmp_path, mode, constructed
 
     rows, site = runner.run_profile_site(tmp_path, factory, 1, mode, timer)
     assert _TimedMatcher.constructed == _TimedMatcher.prepared == constructed
+    assert site["page_pair_load_ms"] > 0
+    assert site["page_pair_preparation_ms"] > 0
+    if mode == "amortized":
+        shared = next(row for row in rows if row["scope"] == "page_pair_shared")
+        for name in ("page_pair_load", "page_pair_preparation"):
+            assert shared[f"{name}_ms"] == site[f"{name}_ms"]
+            assert all(row[f"{name}_ms"] == 0 for row in rows if row["scope"] == "query")
     plain, _ = benchmark.run_site(tmp_path, _TimedMatcher, 1, runtime_mode=mode, algorithm_name="REPATH")
     query_rows = [row for row in rows if row["scope"] == "query"]
     assert [row["predicted_new_element_id"] for row in query_rows] == [row["predicted_new_element_id"] for row in plain]
@@ -89,7 +96,13 @@ def test_command_outputs_and_default_paths(monkeypatch, tmp_path, mode):
     info = json.loads((output / "profiling_metadata.json").read_text())
     assert info["evaluated_queries"] == 2
     assert info["model_loading_included"] == (mode == "cold")
+    for name in ("page_pair_load", "configuration_load", "page_pair_preparation", "lightgbm_load"):
+        assert name in info["component_definitions"]
+    assert "lightgbm_load_ms" in pd.read_csv(output / "component_query_results.csv").columns
+    site_frame = pd.read_csv(output / "component_site_results.csv")
+    assert {"lightgbm_load_ms", "lightgbm_load_pct"} <= set(site_frame.columns)
     summary = pd.read_csv(output / "component_summary.csv")
+    assert "lightgbm_load" in set(summary.component)
     assert summary.component_share_pct.sum() == pytest.approx(100)
     assert summary.std_component_ms_per_query.isna().all()
 
@@ -104,6 +117,7 @@ def test_instrumentation_restored_and_cached_encode_measured(monkeypatch):
     model = Model()
     monkeypatch.setattr(runtime, "_load_semantic_model", lambda *args: model)
     original = features.RepathFeaturePipeline.build_query
+    original_booster_init = runtime.lgb.Booster.__init__
     timer = ComponentTimer()
     with timer.instrument():
         loaded = runtime._load_semantic_model("model", "cpu")
@@ -112,6 +126,7 @@ def test_instrumentation_restored_and_cached_encode_measured(monkeypatch):
         assert timer.values["sbert_encode"] > 0
         assert timer.values["sbert_load"] == 0
     assert features.RepathFeaturePipeline.build_query is original
+    assert runtime.lgb.Booster.__init__ is original_booster_init
     assert "encode" not in model.__dict__
 
 
@@ -154,3 +169,30 @@ def test_instrumented_repath_rankings_match_real_booster(monkeypatch, tmp_path, 
     for name in ("sbert_encode", "candidate_retrieval", "nonsemantic_features", "semantic_similarity", "feature_matrix", "lambdarank_inference"):
         assert summary[f"{name}_ms"] > 0
     assert summary["sbert_load_ms"] > 0 if mode == "cold" else summary["sbert_load_ms"] == 0
+
+    for name in ("configuration_load", "lightgbm_load"):
+        assert summary[f"{name}_ms"] > 0 if mode == "cold" else summary[f"{name}_ms"] == 0
+    assert summary["page_pair_load_ms"] > 0
+    assert summary["page_pair_preparation_ms"] > 0
+    assert sum(summary[f"{key}_ms"] for key in COMPONENTS) == pytest.approx(summary["runtime_total_ms"])
+    assert sum(summary[f"{key}_pct"] for key in COMPONENTS) == pytest.approx(100)
+
+
+def test_preparation_excludes_nested_components(monkeypatch):
+    ticks = iter([0, 10, 20, 40, 50, 60, 100, 120])
+    monkeypatch.setattr("repath_evaluation.profiling.timing.time.perf_counter_ns", lambda: next(ticks))
+    timer = ComponentTimer()
+    encode = timer.wrap("sbert_encode", lambda: None)
+    cache = timer.wrap("semantic_similarity", encode)
+    retrieval = timer.wrap("candidate_retrieval", lambda: None)
+
+    def prepare():
+        cache()
+        retrieval()
+
+    timer.wrap("page_pair_preparation", prepare)()
+    assert timer.values["sbert_encode"] == 20
+    assert timer.values["semantic_similarity"] == 20
+    assert timer.values["candidate_retrieval"] == 40
+    assert timer.values["page_pair_preparation"] == 40
+    assert timer.reconcile(130)["other_overhead"] == 10

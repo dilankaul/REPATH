@@ -16,6 +16,7 @@ def _times(total, values):
 def run_profile_site(site_path, factory, repeat, mode, timer):
     reference = load_page_pair(site_path)
     queries = [query for query in build_queries(reference) if query.eligible]
+    timed_load = timer.wrap("page_pair_load", load_page_pair)
     rows = []
     totals = dict.fromkeys(COMPONENTS, 0)
     total_runtime = 0
@@ -37,9 +38,9 @@ def run_profile_site(site_path, factory, repeat, mode, timer):
             matcher = result = error = None
             start = time.perf_counter_ns()
             try:
-                pair = load_page_pair(site_path)
+                pair = timed_load(site_path)
                 matcher = factory()
-                matcher.prepare(pair)
+                timer.wrap("page_pair_preparation", matcher.prepare)(pair)
                 result = matcher.match(query.old_element_id)
             except Exception as exc:  # noqa: BLE001
                 error = exc
@@ -60,8 +61,8 @@ def run_profile_site(site_path, factory, repeat, mode, timer):
         measurements = []
         start = time.perf_counter_ns()
         try:
-            pair = load_page_pair(site_path)
-            matcher.prepare(pair)
+            pair = timed_load(site_path)
+            timer.wrap("page_pair_preparation", matcher.prepare)(pair)
             for query in queries:
                 before = dict(timer.values)
                 result = error = None

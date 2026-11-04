@@ -8,15 +8,20 @@ from unittest.mock import patch
 from ..algorithms.repath import features, runtime
 
 COMPONENTS = {
+    "page_pair_load": "Timed page-pair data loading, excluding query discovery",
+    "configuration_load": "Inference configuration deserialization through joblib.load",
+    "lightgbm_load": "LightGBM Booster initialization within the timed interval",
     "sbert_load": "SBERT initialization within the timed interval",
-    "sbert_encode": "SentenceTransformer.encode execution",
-    "candidate_retrieval": "Query candidate selection, merging, scoring and shortlisting",
+    "page_pair_preparation": "Matcher preparation, excluding nested retrieval, semantic cache and encoding work",
+    "candidate_retrieval": "Candidate selection, merging, scoring and shortlisting, including base candidates",
     "nonsemantic_features": "build_pair_rows lexical, structural, attribute and geometry features",
+    "sbert_encode": "SentenceTransformer.encode execution",
     "semantic_similarity": "Semantic preparation, embedding cache and similarity, excluding encoding",
     "feature_matrix": "Ordered 50-feature matrix construction and validation",
     "lambdarank_inference": "LightGBM prediction and final ranking",
-    "other_overhead": "Residual page loading, initialization, preparation, cleanup and instrumentation",
+    "other_overhead": "Residual initialization, cleanup, orchestration and instrumentation",
 }
+
 MEASURED = tuple(name for name in COMPONENTS if name != "other_overhead")
 
 
@@ -87,6 +92,8 @@ class ComponentTimer:
                 runtime, "_load_semantic_model", model_wrapper(runtime._load_semantic_model),
             ))
             targets = [
+                (runtime.joblib, "load", "configuration_load"),
+                (runtime.lgb.Booster, "__init__", "lightgbm_load"),
                 (features, "build_pair_rows", "nonsemantic_features"),
                 (features, "extract_base_candidate_indices", "candidate_retrieval"),
                 (runtime.RepathRuntime, "_validated_matrix", "feature_matrix"),
