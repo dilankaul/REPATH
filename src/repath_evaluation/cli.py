@@ -389,6 +389,23 @@ def build_parser() -> argparse.ArgumentParser:
     )
     benchmark.set_defaults(func=benchmark_command)
 
+    from .profiling import configure_parser as configure_profile_parser
+
+    profile = sub.add_parser(
+        "profile", allow_abbrev=False, help="Profile REPATH runtime components (CPU)"
+    )
+    _add_site_selection_arguments(profile)
+    configure_profile_parser(profile)
+
+    from .environment import environment_command
+
+    environment = sub.add_parser(
+        "environment", allow_abbrev=False,
+        help="Capture the runtime environment for any evaluation workflow",
+    )
+    environment.add_argument("--output", default="results/runtime_environment.txt")
+    environment.set_defaults(func=environment_command)
+
     calibrate = sub.add_parser(
         "calibrate",
         allow_abbrev=False,

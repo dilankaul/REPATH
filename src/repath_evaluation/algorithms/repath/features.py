@@ -1977,6 +1977,11 @@ class RepathFeaturePipeline:
         )
         self._add_semantic_features(rows)
 
+        return self._feature_matrix(rows, candidate_indices)
+
+    def _feature_matrix(
+        self, rows: list[dict[str, Any]], candidate_indices: list[int],
+    ) -> tuple[list[int], np.ndarray]:
         matrix = np.asarray(
             [
                 [float(row[feature]) for feature in self.feature_names]

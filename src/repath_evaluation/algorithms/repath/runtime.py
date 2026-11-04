@@ -149,16 +149,7 @@ class RepathRuntime:
         if not candidate_ids:
             return []
 
-        matrix = np.asarray(feature_matrix, dtype=np.float32)
-        expected_shape = (
-            len(candidate_ids),
-            len(self.feature_names),
-        )
-        if matrix.shape != expected_shape:
-            raise TypeError(
-                "REPATH feature shape mismatch: "
-                f"expected {expected_shape}, got {matrix.shape}"
-            )
+        matrix = self._validated_matrix(feature_matrix, candidate_ids)
 
         scores = np.asarray(
             self.model.predict(matrix),
@@ -177,3 +168,17 @@ class RepathRuntime:
             (int(candidate_ids[index]), float(scores[index]))
             for index in order
         ]
+
+    def _validated_matrix(self, feature_matrix, candidate_ids) -> np.ndarray:
+        matrix = np.asarray(feature_matrix, dtype=np.float32)
+        expected_shape = (
+            len(candidate_ids),
+            len(self.feature_names),
+        )
+        if matrix.shape != expected_shape:
+            raise TypeError(
+                "REPATH feature shape mismatch: "
+                f"expected {expected_shape}, got {matrix.shape}"
+            )
+
+        return matrix
