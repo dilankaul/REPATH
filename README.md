@@ -212,9 +212,13 @@ export PYTHONHASHSEED=0
 export OMP_NUM_THREADS=1
 export MKL_NUM_THREADS=1
 export OPENBLAS_NUM_THREADS=1
+
+repath-eval environment --output results/runtime_environment.txt
 ```
 
 `PYTHONHASHSEED=0` makes Python hash-based ordering deterministic. The thread variables reduce CPU oversubscription and runtime variation between runs.
+
+Run environment capture and all benchmark or profiling experiments from the same terminal so they use the same thread settings. The `environment` command records the current environment; it does not configure it. It saves the repository state, hardware, operating system, Python and package versions, and thread settings. Existing environment files are preserved; use a different `--output` path for a new snapshot.
 
 #### Cold end-to-end runtime
 

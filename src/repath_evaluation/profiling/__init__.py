@@ -62,6 +62,7 @@ def profile_command(args):
     aggregate(site_frame).to_csv(output / "component_summary.csv", index=False)
     arguments = {key: value for key, value in vars(args).items() if key != "func"}
     info = metadata(arguments)
+    info.pop("algorithm_sources", None)
     packages = {}
     for package in ("numpy", "pandas", "lightgbm", "torch", "sentence-transformers", "transformers", "joblib"):
         try:

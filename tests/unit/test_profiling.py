@@ -95,6 +95,7 @@ def test_command_outputs_and_default_paths(monkeypatch, tmp_path, mode):
     }
     info = json.loads((output / "profiling_metadata.json").read_text())
     assert info["evaluated_queries"] == 2
+    assert "algorithm_sources" not in info
     assert info["model_loading_included"] == (mode == "cold")
     for name in ("page_pair_load", "configuration_load", "page_pair_preparation", "lightgbm_load"):
         assert name in info["component_definitions"]
