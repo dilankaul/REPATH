@@ -1,6 +1,6 @@
 # REPATH
 
-This repository provides a reproducible evaluation suite for REPATH and five Web-UI element-matching baselines. It combines baseline benchmarking, cold and page-pair amortized runtime measurement, REPATH ranking evaluation, exhaustive feature-group ablation reporting, feature-importance reporting, and confidence-margin calibration.
+This repository provides a reproducible evaluation suite for REPATH and five Web UI element-matching baselines. It includes accuracy and runtime benchmarking, component-level REPATH profiling, statistical comparisons, ranking evaluation, feature importance, feature-group ablation, and confidence-margin calibration.
 
 ## Publication
 
@@ -14,24 +14,23 @@ Accepted for presentation at the 2026 International Conference on Advancements i
 - Calculate bootstrap confidence intervals and exact McNemar comparisons with Holm correction.
 - Select `test` (default), `development`, `all`, one site, or multiple explicit sites.
 - Run accuracy-only benchmarks by default, or select cold end-to-end or page-pair-amortized runtime benchmarking with `--runtime-mode cold` or `--runtime-mode amortized`.
-- Evaluate a user-selected REPATH confidence margin with `--tau`.
-- Select a margin automatically using pooled development out-of-fold precision and coverage constraints.
+- Profile REPATH runtime components separately with `repath-eval profile`.
+- Record hardware, software, repository state, and thread settings with `repath-eval environment`.
+- Evaluate a fixed confidence margin with `--tau`, or select one using pooled development out-of-fold predictions.
 - Reproduce feature generation, training, exhaustive ablation, and calibration with the bundled Jupyter notebooks.
-- Display the bundled REPATH ranking, calibration, feature-vector, feature-importance, and ablation results directly in this README.
 
 ## Installation
+
+Use Python 3.10 or later and run the following commands from the repository root:
 
 ```bash
 python -m pip install --upgrade pip
 python -m pip install -e '.[dev]'
 pytest -q
-```
-
-```bash
 repath-eval --help
 ```
 
-`repath-benchmark` remains available as a compatibility alias. The old `run` subcommand remains an alias for `benchmark`.
+`repath-benchmark` is a compatibility alias for `repath-eval`; `run` is an alias for the `benchmark` subcommand.
 
 ## Repository layout
 
@@ -39,6 +38,7 @@ repath-eval --help
 REPATH-Web-UI-Locator-Healing/
 ├── artifacts/
 │   ├── benchmark/
+│   ├── profiling/
 │   ├── repath/
 │   └── statistics/
 ├── configs/
@@ -52,7 +52,9 @@ REPATH-Web-UI-Locator-Healing/
 │   ├── algorithms/
 │   ├── calibration/
 │   ├── data/
-│   └── evaluation/
+│   ├── evaluation/
+│   ├── profiling/
+│   └── environment.py
 └── tests/
 ```
 
@@ -61,6 +63,7 @@ REPATH-Web-UI-Locator-Healing/
 This suite uses the dataset released with **UITestFix**:
 
 - Dataset: [Web-UI-Dataset](https://anonymous.4open.science/r/Web-UI-Dataset-9645)
+- Original repository: [UITestFix](https://github.com/YuanzhangLin/UITestFix)
 - Paper: Yuanzhang Lin, Guoyao Wen, and Xiang Gao, ["Automated Fixing of Web UI Tests via Iterative Element Matching"](https://doi.org/10.1109/ASE56229.2023.00048), ASE 2023.
 
 Download the dataset and open its `MatchingDataset` folder. Copy the folders **inside** `MatchingDataset` directly into this repository's `data/` directory.
@@ -122,10 +125,9 @@ The groups are stored in [`configs/site_split.yaml`](configs/site_split.yaml). T
 - `xfinity-2018-2020`
 - `yahoo`
 
-The test group is the default:
+The test group is selected by default. Examples of site selection:
 
 ```bash
-repath-eval inspect
 repath-eval inspect --sites test
 repath-eval inspect --sites development
 repath-eval inspect --sites all
@@ -154,6 +156,8 @@ By default, this evaluates WATER, VISTA, SFTM, WebEvo, Similo, and REPATH on the
 | `--repeats`      | Number of complete benchmark repetitions; must be a positive integer      | `1`                                     |
 | `--runtime-mode` | Runtime protocol: `cold` or `amortized`; omit for accuracy-only execution | Not set                                 |
 | `--output`       | Directory used to save benchmark result files                             | `results/benchmark`                     |
+
+Use `--data-root` and `--split-config` to select a different dataset or site split. REPATH accepts `--repath-model` (default: `models/lgb_ranker.txt`), `--repath-config` (default: `models/config_base.pkl`), and `--repath-device` (default: `cpu`).
 
 Run only the five baseline algorithms:
 
@@ -205,7 +209,9 @@ The benchmark supports accuracy-only execution and two timed protocols. Both tim
 | `--runtime-mode cold`      | Independently loads the page data, constructs and prepares the matcher, and executes the match for every query                                              | Mean cold end-to-end time per query     |
 | `--runtime-mode amortized` | Loads and prepares once per page pair, executes all associated queries, and divides the complete timed page-pair duration by the number of eligible queries | Mean page-pair amortized time per query |
 
-For more reproducible runtime measurements, restrict common numerical libraries to one CPU thread before running either timed protocol:
+#### Environment setup
+
+Before timed benchmarks or profiling, set the hash seed and restrict common numerical libraries to one CPU thread:
 
 ```bash
 export PYTHONHASHSEED=0
@@ -218,12 +224,16 @@ repath-eval environment --output results/runtime_environment.txt
 
 `PYTHONHASHSEED=0` makes Python hash-based ordering deterministic. The thread variables reduce CPU oversubscription and runtime variation between runs.
 
-Run environment capture and all benchmark or profiling experiments from the same terminal so they use the same thread settings. The `environment` command records the current environment; it does not configure it. It saves the repository state, hardware, operating system, Python and package versions, and thread settings. Existing environment files are preserved; use a different `--output` path for a new snapshot.
+Run environment capture and experiments from the same terminal so they inherit these settings. The `environment` command records repository state, hardware, operating system, Python and package versions, and thread settings; it does not configure them. Use a new `--output` path for each snapshot because existing files are preserved.
 
 #### Cold end-to-end runtime
 
+Run ten complete repetitions on the held-out test sites:
+
 ```bash
 repath-eval benchmark \
+  --sites test \
+  --repeats 10 \
   --runtime-mode cold \
   --output results/runtime_cold
 ```
@@ -234,6 +244,8 @@ Cold timing creates an independent execution for every query. The timer includes
 
 ```bash
 repath-eval benchmark \
+  --sites test \
+  --repeats 10 \
   --runtime-mode amortized \
   --output results/runtime_amortized
 ```
@@ -288,29 +300,33 @@ Runtime measurements were collected on a GitHub Codespaces virtual machine with 
 
 The publication-ready benchmark summaries and environment record are committed under [`artifacts/benchmark/`](artifacts/benchmark/). Raw per-run outputs are written under `results/` and excluded from version control.
 
-### Component-Level Runtime Profiling
+## Component-Level Runtime Profiling
 
-To examine REPATH's computational overhead, we conducted component-level profiling under the cold and page-pair-amortized runtime protocols. The analysis covers 318 queries from six held-out websites, with 10 repetitions per protocol.
+Profiling measures REPATH's runtime components without changing retrieval, ranking, or applying confidence thresholding. It follows the cold end-to-end and page-pair amortized protocols described above.
 
-| Component | Cold (%) | Amortized (%) |
+The results below cover 318 queries from six held-out websites, with 10 repetitions per protocol. Values show each component's share of total measured runtime, pooled across sites and repetitions. Components are mutually exclusive: nested encoding and retrieval work is excluded from the parent component. A dash (—) indicates loading excluded from the amortized timed region.
+
+| Component | Cold end-to-end share | Page-pair amortized share |
 |---|---:|---:|
-| Page-pair data loading | 4.54 | 0.28 |
-| Configuration loading | 0.04 | — |
-| LightGBM model loading | 0.13 | — |
-| SBERT model loading | 4.25 | — |
-| Page-pair preparation | 12.86 | 0.56 |
-| Candidate retrieval and shortlisting | 10.24 | 30.93 |
-| Nonsemantic feature computation | 0.51 | 1.81 |
-| SBERT encoding | 67.05 | 65.93 |
-| Semantic similarity computation | 0.12 | 0.40 |
-| Feature matrix construction | 0.01 | 0.03 |
-| LightGBM inference and ranking | 0.01 | 0.04 |
-| Other overhead | 0.25 | 0.01 |
-| **Total** | **100.00** | **100.00** |
+| Page-pair data loading | 4.54% | 0.28% |
+| Configuration loading | 0.04% | — |
+| LightGBM model loading | 0.13% | — |
+| SBERT model loading | 4.25% | — |
+| Page-pair preparation | 12.86% | 0.56% |
+| Candidate retrieval and shortlisting | 10.24% | 30.93% |
+| Nonsemantic feature computation | 0.51% | 1.81% |
+| SBERT encoding | 67.05% | 65.93% |
+| Semantic similarity computation | 0.12% | 0.40% |
+| Feature matrix construction | 0.01% | 0.03% |
+| LightGBM inference and ranking | 0.01% | 0.04% |
+| Other overhead | 0.25% | 0.01% |
+| **Total** | **100.00%** | **100.00%** |
 
-Configuration and model loading are excluded from the timed region of the amortized protocol. Component percentages are calculated from the total measured time of the corresponding instrumented profiling experiment. Rounded values may not sum to exactly 100%.
+SBERT model loading and encoding together account for 71.30% of cold runtime, while encoding alone accounts for 65.93% of page-pair-amortized runtime.
 
-The original comparative runtime results are obtained from separate uninstrumented benchmark runs.
+Shares sum to 100% before rounding; displayed values may not sum to exactly 100%.
+
+Instrumentation adds measurement overhead. Use the separate uninstrumented benchmark runs for comparative runtime results.
 
 Run profiling from the same terminal used for the environment setup above. Profiling supports CPU execution only.
 
@@ -342,7 +358,9 @@ repath-eval profile \
   --output results/profiling/debug/instagram
 ```
 
-The full-test-set commands write to `results/profiling/cold/` and `results/profiling/amortized/`, respectively. Each output directory contains `component_query_results.csv`, `component_site_results.csv`, `component_summary.csv`, and `profiling_metadata.json`. Existing profiling files in the selected directory are overwritten. Use `--output` to keep separate runs.
+The full-test-set commands write to `results/profiling/cold/` and `results/profiling/amortized/`, respectively. Use `--output` to keep separate runs. Profiling defaults to the test sites, one repetition, and cold timing; it accepts the same dataset, split, model, and configuration options as the benchmark. Only `--repath-device cpu` is supported.
+
+Query rows record actual query execution. In amortized mode, `page_pair_shared` rows contain page loading, preparation, cleanup, and loop overhead once per site and repeat. Sum both scopes to recover the measured total. Summary shares use total component time divided by total elapsed time; component means and sample standard deviations are calculated across complete test-set repetitions. See [Output files](#output-files) for filenames.
 
 **Profiling artifacts:**
 
@@ -394,8 +412,6 @@ All five Holm-adjusted p-values are below 0.001. The bootstrap uses 10,000 paire
 
 - [Accuracy confidence intervals](artifacts/statistics/accuracy_confidence_intervals.csv)
 - [Pairwise statistical comparisons](artifacts/statistics/statistical_comparison.csv)
-
-The command writes `accuracy_confidence_intervals.csv` and `statistical_comparison.csv` to `results/statistics/`. The corresponding publication summaries are retained under `artifacts/statistics/`.
 
 ## Research notebooks
 
@@ -486,7 +502,7 @@ The bundled notebooks produce these results using the 50-feature representation,
 - [LightGBM model](models/lgb_ranker.txt)
 - [Base configuration](models/config_base.pkl)
 
-The query manifest, candidate scores, and calibrated configuration are linked under [Calibration artifacts](#repath-confidence-margin-calibration). The [research notebooks](#research-notebooks) produce the results below, including feature importance and ablation reports.
+The query manifest, candidate scores, and calibrated configuration are listed in the [calibration section](#repath-confidence-margin-calibration). The [research notebooks](#research-notebooks) produce the results below.
 
 ### Candidate retrieval
 
@@ -767,9 +783,9 @@ Raw experiment outputs under `results/` are excluded from version control. Selec
 
 ## Evaluation protocol
 
-The benchmark reads each site's `result/result.json` and uses `matchMap` as the expected old-to-new mapping. Queries whose old grouped node cannot be resolved, or whose old grouped node has `elementType == 1`, are excluded before evaluation. Every remaining query stays in the denominator. A missing prediction, failed match, or algorithm error is incorrect.
+Benchmarking and profiling use the same eligible queries. The evaluator reads each site's `result/result.json` and uses `matchMap` as the expected old-to-new mapping. Queries whose old grouped node cannot be resolved, or whose old grouped node has `elementType == 1`, are excluded before evaluation. Every remaining query stays in the denominator. A missing prediction, failed match, or algorithm error is incorrect.
 
-Top-1 correctness requires exact equality between the predicted and expected new grouped-node IDs. Accuracy-only and amortized execution reuse page-level preparation across queries; this reuse does not intentionally alter candidates, scores, rankings, predictions, or correctness.
+Top-1 correctness requires exact equality between the predicted and expected new grouped-node IDs. Accuracy-only and amortized execution reuse page-level preparation across queries. Benchmarking and profiling evaluate retrieval and ranking without applying the calibrated confidence threshold; acceptance decisions are evaluated separately by `calibrate`.
 
 ## Baseline attribution and implementation sources
 
