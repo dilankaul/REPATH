@@ -259,6 +259,13 @@ The accuracy results use all 318 framework queries from the six held-out test si
 
 REPATH achieved the highest Top-1 accuracy. Its mean runtime was lower than VISTA under both timed protocols, although SFTM, WATER, WebEvo, and Similo were faster in the page-pair amortized setting.
 
+**Benchmark artifacts:**
+
+- [Accuracy summary](artifacts/benchmark/accuracy_summary.csv)
+- [Cold runtime summary](artifacts/benchmark/runtime_cold_10_run_summary.csv)
+- [Page-pair amortized runtime summary](artifacts/benchmark/runtime_amortized_10_run_summary.csv)
+- [Runtime environment record](artifacts/benchmark/runtime_environment.txt)
+
 #### Runtime environment
 
 Runtime measurements were collected on a GitHub Codespaces virtual machine with the hardware and software configuration shown below.
@@ -305,6 +312,38 @@ Configuration and model loading are excluded from the timed region of the amorti
 
 The original comparative runtime results are obtained from separate uninstrumented benchmark runs.
 
+Run profiling from the same terminal used for the environment setup above. Profiling supports CPU execution only.
+
+Cold profiling:
+
+```bash
+repath-eval profile \
+  --sites test \
+  --repeats 10 \
+  --runtime-mode cold
+```
+
+Page-pair-amortized profiling:
+
+```bash
+repath-eval profile \
+  --sites test \
+  --repeats 10 \
+  --runtime-mode amortized
+```
+
+Single-site debugging:
+
+```bash
+repath-eval profile \
+  --sites instagram \
+  --repeats 1 \
+  --runtime-mode amortized \
+  --output results/profiling/debug/instagram
+```
+
+The full-test-set commands write to `results/profiling/cold/` and `results/profiling/amortized/`, respectively. Each output directory contains `component_query_results.csv`, `component_site_results.csv`, `component_summary.csv`, and `profiling_metadata.json`. Existing profiling files in the selected directory are overwritten. Use `--output` to keep separate runs.
+
 **Profiling artifacts:**
 
 - [Cold component summary](artifacts/profiling/runtime_cold_10_component_summary.csv)
@@ -350,6 +389,11 @@ REPATH is compared with each baseline using an exact two-sided McNemar test. Hol
 | Similo | +16.04 | [11.64, 20.44] | 1.70e-12 | 3.40e-12 |
 
 All five Holm-adjusted p-values are below 0.001. The bootstrap uses 10,000 paired query-level resamples with replacement (NumPy `default_rng`, seed 42), with shared resampling indices across algorithms. The reported confidence intervals are nominal rather than simultaneous. Neither the query-level bootstrap nor McNemar's test accounts for within-website dependence.
+
+**Statistical artifacts:**
+
+- [Accuracy confidence intervals](artifacts/statistics/accuracy_confidence_intervals.csv)
+- [Pairwise statistical comparisons](artifacts/statistics/statistical_comparison.csv)
 
 The command writes `accuracy_confidence_intervals.csv` and `statistical_comparison.csv` to `results/statistics/`. The corresponding publication summaries are retained under `artifacts/statistics/`.
 
@@ -398,14 +442,12 @@ With the bundled artifacts, the default calibration selects `tau = 0.40`.
 | `--base-config`             | Base REPATH runtime configuration used to generate a calibrated configuration  | Not set                                                 |
 | `--config-output`           | Output path for the calibrated runtime configuration; requires `--base-config` | Not set                                                 |
 
-The calibration inputs are included in the repository:
+**Calibration artifacts:**
 
-```text
-artifacts/repath/
-├── repath_query_manifest.csv
-├── development_oof_candidate_scores.csv
-└── test_candidate_scores.csv
-```
+- [Query manifest](artifacts/repath/repath_query_manifest.csv)
+- [Development OOF candidate scores](artifacts/repath/development_oof_candidate_scores.csv)
+- [Held-out test candidate scores](artifacts/repath/test_candidate_scores.csv)
+- [Calibrated runtime configuration](models/config.pkl)
 
 Evaluate the bundled fixed operating point without reselecting it:
 
@@ -439,7 +481,12 @@ The command reports accepted and correct cases, precision, conditional and end-t
 
 The bundled notebooks produce these results using the 50-feature representation, 16 development sites, six held-out test sites, four-fold site-grouped development cross-validation, and all 31 non-empty feature-group combinations.
 
-> **Artifact alignment:** `models/lgb_ranker.txt`, `models/config_base.pkl`, the calibration score files, and the query manifest are produced by the bundled notebook workflow and align with the result tables below.
+**REPATH model artifacts:**
+
+- [LightGBM model](models/lgb_ranker.txt)
+- [Base configuration](models/config_base.pkl)
+
+The query manifest, candidate scores, and calibrated configuration are linked under [Calibration artifacts](#repath-confidence-margin-calibration). The [research notebooks](#research-notebooks) produce the results below, including feature importance and ablation reports.
 
 ### Candidate retrieval
 
@@ -704,11 +751,19 @@ The training notebook reports the Top 20 gain-ranked features shown below.
 
 ## Output files
 
-A benchmark run writes `query_results.csv`, `site_results.csv`, `summary.csv`, and `run_metadata.json` to the selected output directory. Runtime fields are omitted for accuracy-only execution and included when `--runtime-mode cold` or `--runtime-mode amortized` is selected.
+| Command | Default location | Output files |
+| --- | --- | --- |
+| `benchmark` | `results/benchmark/` | `query_results.csv`, `site_results.csv`, `summary.csv`, `run_metadata.json` |
+| `profile` | `results/profiling/cold/` or `results/profiling/amortized/` | `component_query_results.csv`, `component_site_results.csv`, `component_summary.csv`, `profiling_metadata.json` |
+| `statistics` | `results/statistics/` | `accuracy_confidence_intervals.csv`, `statistical_comparison.csv` |
+| `calibrate` | `results/calibration/` | `tau_margin_summary.csv`, `tau_margin_query_decisions.csv`, `calibration_metadata.json`; automatic selection also writes `tau_margin_development_oof_curve.csv` |
+| `environment` | `results/runtime_environment.txt` | One text snapshot at the selected path |
 
-The `results/` directory is excluded from version control because it contains raw and repeated execution outputs. The summarized accuracy, runtime, and environment artifacts used in the reported benchmark are committed under [`artifacts/benchmark/`](artifacts/benchmark/).
+Use `--output` to change the destination, or `--output-dir` for `statistics`. For `environment`, `--output` is a file path; for the other commands, it is a directory. Environment capture refuses to overwrite an existing file; the experiment commands replace their output files in the selected directory.
 
-A calibration run writes `tau_margin_summary.csv`, `tau_margin_query_decisions.csv`, and `calibration_metadata.json`. Automatic selection also writes `tau_margin_development_oof_curve.csv`.
+Benchmark runtime fields are present only when `--runtime-mode` is selected. Profiling outputs include component times in milliseconds, site and overall percentages, and timing metadata. In amortized profiling, query rows record actual query execution, while `page_pair_shared` rows record shared costs once per page pair and repeat.
+
+Raw experiment outputs under `results/` are excluded from version control. Selected publication summaries and environment records are retained under `artifacts/`; links appear in the corresponding results sections above.
 
 ## Evaluation protocol
 
