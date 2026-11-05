@@ -281,6 +281,36 @@ Runtime measurements were collected on a GitHub Codespaces virtual machine with 
 
 The publication-ready benchmark summaries and environment record are committed under [`artifacts/benchmark/`](artifacts/benchmark/). Raw per-run outputs are written under `results/` and excluded from version control.
 
+### Component-Level Runtime Profiling
+
+To examine REPATH's computational overhead, we conducted component-level profiling under the cold and page-pair-amortized runtime protocols. The analysis covers 318 queries from six held-out websites, with 10 repetitions per protocol.
+
+| Component | Cold (%) | Amortized (%) |
+|---|---:|---:|
+| Page-pair data loading | 4.54 | 0.28 |
+| Configuration loading | 0.04 | — |
+| LightGBM model loading | 0.13 | — |
+| SBERT model loading | 4.25 | — |
+| Page-pair preparation | 12.86 | 0.56 |
+| Candidate retrieval and shortlisting | 10.24 | 30.93 |
+| Nonsemantic feature computation | 0.51 | 1.81 |
+| SBERT encoding | 67.05 | 65.93 |
+| Semantic similarity computation | 0.12 | 0.40 |
+| Feature matrix construction | 0.01 | 0.03 |
+| LightGBM inference and ranking | 0.01 | 0.04 |
+| Other overhead | 0.25 | 0.01 |
+| **Total** | **100.00** | **100.00** |
+
+Configuration and model loading are excluded from the timed region of the amortized protocol. Component percentages are calculated from the total measured time of the corresponding instrumented profiling experiment. Rounded values may not sum to exactly 100%.
+
+The original comparative runtime results are obtained from separate uninstrumented benchmark runs.
+
+**Profiling artifacts:**
+
+- [Cold component summary](artifacts/profiling/runtime_cold_10_component_summary.csv)
+- [Amortized component summary](artifacts/profiling/runtime_amortized_10_component_summary.csv)
+- [Profiling environment](artifacts/profiling/profiling_environment.txt)
+
 ## Statistical analysis
 
 The analysis uses paired Top-1 correctness outcomes for the 318 queries from the six held-out test sites. Run the accuracy benchmark before computing the statistics:
