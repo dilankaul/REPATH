@@ -6,7 +6,20 @@ This repository provides a reproducible evaluation suite for REPATH and five Web
 
 **REPATH: Confidence-Calibrated Learning-to-Rank for Self-Healing Web UI Test Locators**
 
-Accepted for presentation at the 2026 International Conference on Advancements in Computing (ICAC 2026).
+<table>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/UmeshIshan"><img src="https://github.com/UmeshIshan.png" width="100" height="100" alt="Umesh Ishan Jayakody"></a><br>
+      Umesh Ishan Jayakody <a href="https://github.com/UmeshIshan"><img src="docs/assets/github.svg" width="12" height="12" alt="GitHub profile for Umesh Ishan Jayakody"></a> <a href="https://orcid.org/0009-0000-5596-8076"><img src="docs/assets/orcid.svg" width="12" height="12" alt="ORCID profile for Umesh Ishan Jayakody"></a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/dilankaul"><img src="https://github.com/dilankaul.png" width="100" height="100" alt="Dilanka Uswatta-Liyanage"></a><br>
+      Dilanka Uswatta-Liyanage <a href="https://github.com/dilankaul"><img src="docs/assets/github.svg" width="12" height="12" alt="GitHub profile for Dilanka Uswatta-Liyanage"></a> <a href="https://orcid.org/0009-0003-8331-555X"><img src="docs/assets/orcid.svg" width="12" height="12" alt="ORCID profile for Dilanka Uswatta-Liyanage"></a>
+    </td>
+  </tr>
+</table>
+
+Accepted for presentation at the **2026 8th International Conference on Advancements in Computing (ICAC 2026)**.
 
 ## Capabilities
 
@@ -35,7 +48,7 @@ repath-eval --help
 ## Repository layout
 
 ```text
-REPATH-Web-UI-Locator-Healing/
+REPATH/
 ├── artifacts/
 │   ├── benchmark/
 │   ├── profiling/
@@ -43,6 +56,7 @@ REPATH-Web-UI-Locator-Healing/
 │   └── statistics/
 ├── configs/
 ├── data/
+├── docs/
 ├── generated/
 ├── models/
 ├── notebooks/
@@ -69,7 +83,7 @@ This suite uses the dataset released with **UITestFix**:
 Download the dataset and open its `MatchingDataset` folder. Copy the folders **inside** `MatchingDataset` directly into this repository's `data/` directory.
 
 ```text
-REPATH-Web-UI-Locator-Healing/
+REPATH/
 ├── data/
 │   ├── amazon-2017-2020/
 │   │   ├── old/
@@ -322,7 +336,7 @@ The results below cover 318 queries from six held-out websites, with 10 repetiti
 | Other overhead | 0.25% | 0.01% |
 | **Total** | **100.00%** | **100.00%** |
 
-SBERT model loading and encoding together account for 71.30% of cold runtime, while encoding alone accounts for 65.93% of page-pair-amortized runtime.
+SBERT model loading and encoding together account for 71.30% of cold end-to-end runtime, while encoding alone accounts for 65.93% of page-pair-amortized runtime.
 
 Shares sum to 100% before rounding; displayed values may not sum to exactly 100%.
 
@@ -725,7 +739,7 @@ The training notebook reports the Top 20 gain-ranked features shown below.
 
 ### Exhaustive feature-group ablation
 
-<details open>
+<details>
 
 <summary><strong>Complete 31-combination ablation table</strong></summary>
 
