@@ -842,4 +842,6 @@ Each implementation is pinned to an authors' repository revision. The revisions 
 
 ## Third-party notices
 
-See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md). The SFTM module carries `SPDX-License-Identifier: GPL-3.0-or-later`, and the GPL version 3 text is included in [`LICENSES/GPL-3.0.txt`](LICENSES/GPL-3.0.txt).
+See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for baseline attribution, upstream repositories, and licensing information.
+
+Applicable third-party license texts are provided in [LICENSES/](LICENSES/).
