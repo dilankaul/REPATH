@@ -1,4 +1,8 @@
-"""Similo 14-property matching baseline pinned to ``Similo2``."""
+"""Python reproduction of the Similo matching method.
+
+Original project: https://github.com/michelnass/Similo2
+Implemented for the REPATH evaluation framework.
+"""
 
 from __future__ import annotations
 

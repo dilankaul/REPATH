@@ -1,3 +1,9 @@
+"""Python reproduction of the WATER locator-repair method.
+
+Original project: https://github.com/shauvik/water
+Implemented for the REPATH evaluation framework.
+"""
+
 from __future__ import annotations
 
 import time

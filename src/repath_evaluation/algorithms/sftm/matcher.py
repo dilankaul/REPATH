@@ -1,5 +1,12 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""SFTM tree-matching baseline pinned to the authors' implementation."""
+#
+# Original SFTM implementation:
+# Copyright (C) 2021 Mantu, Sacha Brisset.
+#
+# Python port and REPATH integration modifications, 2026.
+# Original source: https://github.com/amaris/sftm_tree_matching
+
+"""SFTM tree-matching baseline for REPATH."""
 
 from __future__ import annotations
 

@@ -1,4 +1,8 @@
-"""WebEvo semantics-based visual-search baseline."""
+"""Python reproduction of the WebEvo matching method.
+
+Original project: https://github.com/webevoexp/webevo
+Implemented for the REPATH evaluation framework.
+"""
 
 from __future__ import annotations
 

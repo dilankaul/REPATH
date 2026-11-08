@@ -1,3 +1,10 @@
+"""Python implementation of the VISTA visual-matching baseline.
+
+Original project: https://github.com/saltlab/vista
+Upstream license: Apache-2.0
+Adapted for the REPATH evaluation framework, 2026.
+"""
+
 from __future__ import annotations
 
 import time
